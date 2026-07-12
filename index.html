@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>لعبة الذاكرة - رنيم فاي</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:Tahoma,Arial,sans-serif;background:#F0FAFA;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;padding:10px 4px 28px;overflow-x:hidden;}
+.brand{font-size:12px;color:#1DB5A8;font-weight:700;opacity:.8;text-align:center;margin-bottom:2px;}
+h1{font-size:24px;color:#1a5f5b;font-weight:900;text-align:center;margin-bottom:3px;}
+.sub{font-size:12px;color:#5a8a86;text-align:center;margin-bottom:8px;}
+.stats{display:flex;gap:5px;justify-content:center;margin:0 0 8px;flex-wrap:wrap;width:100%;}
+.sbox{background:white;border-radius:12px;padding:4px 10px;text-align:center;
+      box-shadow:0 3px 10px rgba(29,181,168,.15);min-width:62px;}
+.slbl{font-size:9px;color:#8ab;}
+.sval{font-size:17px;font-weight:900;color:#1DB5A8;line-height:1.1;}
+.lvl-row{display:flex;gap:7px;margin-bottom:8px;justify-content:center;flex-wrap:wrap;}
+.lvl{border:2px solid #1DB5A8;background:white;color:#1DB5A8;
+     border-radius:20px;padding:5px 14px;font-size:13px;font-family:inherit;cursor:pointer;font-weight:700;}
+.lvl.on{background:#1DB5A8;color:white;}
+.tbar-wrap{width:92%;max-width:460px;height:5px;background:#d4eeec;border-radius:4px;margin-bottom:8px;overflow:hidden;}
+#tbar{height:100%;border-radius:4px;width:100%;background:linear-gradient(90deg,#1DB5A8,#F06292);}
+#grid-wrap{width:100%;max-width:98vw;margin-bottom:12px;padding:0 4px;}
+#grid{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;}
+
+/* ── CARD: z-index swap — most compatible on Android ── */
+.card{
+  position:relative;
+  display:block;
+  cursor:pointer;
+  flex-shrink:0;
+}
+.card-back,
+.card-front{
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  border-radius:12px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;
+  pointer-events:none;user-select:none;
+}
+.card-back{
+  background:linear-gradient(135deg,#1DB5A8,#0d7a71);
+  border:3px solid rgba(255,255,255,.25);
+  box-shadow:0 3px 10px rgba(13,122,113,.35);
+  z-index:2;
+}
+.card-back .pat{font-size:26px;opacity:.5;color:white;}
+.card-back .bm{font-size:8px;color:rgba(255,255,255,.6);font-weight:700;letter-spacing:.5px;}
+.card-front{
+  background:white;
+  border:3px solid #d0f0ee;
+  box-shadow:0 3px 10px rgba(29,181,168,.15);
+  z-index:1;
+  padding:4px;
+}
+.card-front .em{font-size:30px;line-height:1.1;}
+.card-front .wd{font-size:12px;color:#1a5f5b;font-weight:900;text-align:center;line-height:1.2;}
+
+/* flipped: swap z-index */
+.card.flipped .card-back{ z-index:1; }
+.card.flipped .card-front{ z-index:2; }
+/* matched: swap + green tint */
+.card.matched .card-back{ z-index:1; }
+.card.matched .card-front{
+  z-index:2;
+  background:linear-gradient(145deg,#e0faf7,#c8f0eb);
+  border-color:#1DB5A8;
+}
+/* wrong shake */
+.card.wrong{ animation:wsh .32s ease; }
+@keyframes wsh{
+  0%,100%{left:0;}
+  25%{left:-7px;}
+  75%{left:7px;}
+}
+
+.btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:8px;}
+.btn{border:none;border-radius:22px;padding:10px 22px;font-size:14px;
+     font-family:inherit;font-weight:800;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.12);}
+.btp{background:#F06292;color:white;}
+.bts{background:white;color:#1DB5A8;border:2px solid #1DB5A8;}
+
+#win{display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+     background:rgba(10,60,57,.82);z-index:99;
+     align-items:center;justify-content:center;}
+#win.show{display:flex;}
+.wc{background:white;border-radius:22px;padding:28px 22px 20px;
+    text-align:center;max-width:290px;width:88%;
+    box-shadow:0 16px 50px rgba(0,0,0,.3);}
+.we{font-size:52px;margin-bottom:5px;}
+.wt{font-size:21px;font-weight:900;color:#1DB5A8;margin-bottom:5px;}
+.wst{font-size:27px;letter-spacing:3px;margin-bottom:7px;}
+.ws{font-size:13px;color:#555;margin-bottom:15px;line-height:1.7;}
+.ws strong{color:#1DB5A8;}
+
+.cfall{position:fixed;top:-10px;border-radius:2px;pointer-events:none;
+       z-index:200;animation:cf linear forwards;}
+@keyframes cf{to{transform:translateY(110vh) rotate(720deg);opacity:0;}}
+</style>
+</head>
+<body>
+
+<div class="brand">رنيم فاي — التعلم الممتع</div>
+<h1>🧠 لعبة الذاكرة</h1>
+<div class="sub">اعثر على كل زوج مطابق!</div>
+
+<div class="stats">
+  <div class="sbox"><div class="slbl">النقاط</div><div class="sval" id="sc">0</div></div>
+  <div class="sbox"><div class="slbl">المحاولات</div><div class="sval" id="mv">0</div></div>
+  <div class="sbox"><div class="slbl">الوقت</div><div class="sval" id="tm">00:00</div></div>
+  <div class="sbox"><div class="slbl">الأزواج</div><div class="sval" id="pf">0/<span id="pt">6</span></div></div>
+</div>
+
+<div class="lvl-row">
+  <button class="lvl on" id="b-easy" onclick="window.setLv('easy')">سهل (6)</button>
+  <button class="lvl"    id="b-med"  onclick="window.setLv('med')">متوسط (10)</button>
+  <button class="lvl"    id="b-hard" onclick="window.setLv('hard')">صعب (16)</button>
+</div>
+
+<div class="tbar-wrap"><div id="tbar"></div></div>
+<div id="grid-wrap"><div id="grid"></div></div>
+
+<div class="btn-row">
+  <button class="btn btp" onclick="window.startGame()">🔄 لعبة جديدة</button>
+  <button class="btn bts" onclick="window.doHint()">🔊 إرشادات</button>
+</div>
+
+<div id="win">
+  <div class="wc">
+    <div class="we" id="we">🏆</div>
+    <div class="wst" id="wst"></div>
+    <div class="wt" id="wtitle">أحسنت! 🎉</div>
+    <div class="ws" id="wws"></div>
+    <button class="btn btp" style="width:100%" onclick="window.playAgain()">العب مرة أخرى</button>
+  </div>
+</div>
+
+<script>
+var ITEMS=[
+  {e:'🐱',w:'قطة'},{e:'🐶',w:'كلب'},{e:'🐘',w:'فيل'},{e:'🦁',w:'اسد'},
+  {e:'🐸',w:'ضفدع'},{e:'🐇',w:'ارنب'},{e:'🍎',w:'تفاحة'},{e:'🍌',w:'موزة'},
+  {e:'🍓',w:'فراولة'},{e:'🍊',w:'برتقالة'},{e:'🍇',w:'عنب'},{e:'🌟',w:'نجمة'},
+  {e:'🌙',w:'قمر'},{e:'☀️',w:'شمس'},{e:'🌈',w:'قوس قزح'},{e:'🦋',w:'فراشة'}
+];
+var LVL={easy:6,med:10,hard:16};
+var lv='easy';
+var cards=[];
+var flipped=[];
+var matched=0,moves=0,score=0;
+var canFlip=true;
+var tInt=null;
+var elapsed=0,tLim=0;
+var running=false;
+var gameId=0;
+
+/* ── TTS ── */
+var vx=[];
+try{
+  speechSynthesis.addEventListener('voiceschanged',function(){
+    try{vx=speechSynthesis.getVoices();}catch(x){}
+  });
+  vx=speechSynthesis.getVoices();
+}catch(x){}
+
+function speak(t){
+  try{
+    speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(t);
+    u.lang='ar-SA'; u.rate=0.85;
+    var v=null,k;
+    for(k=0;k<vx.length;k++){if(vx[k].lang==='ar-SA'){v=vx[k];break;}}
+    if(!v)for(k=0;k<vx.length;k++){if(vx[k].lang.indexOf('ar')===0){v=vx[k];break;}}
+    if(v)u.voice=v;
+    speechSynthesis.speak(u);
+  }catch(x){}
+}
+
+/* ── PUBLIC ── */
+window.doHint=function(){speak('ابحث عن الازواج المتشابهة');};
+
+window.playAgain=function(){
+  document.getElementById('win').classList.remove('show');
+  window.startGame();
+};
+
+window.setLv=function(l){
+  lv=l;
+  var b=document.querySelectorAll('.lvl');
+  for(var k=0;k<b.length;k++) b[k].classList.remove('on');
+  document.getElementById('b-'+l).classList.add('on');
+  window.startGame();
+};
+
+window.startGame=function(){
+  /* bump game ID — kills all pending callbacks */
+  gameId++;
+  var myId=gameId;
+
+  clearInterval(tInt); tInt=null;
+  elapsed=0;moves=0;score=0;matched=0;
+  flipped=[];canFlip=true;running=true;
+
+  document.getElementById('sc').textContent='0';
+  document.getElementById('mv').textContent='0';
+  document.getElementById('tm').textContent='00:00';
+  var cnt=LVL[lv];
+  document.getElementById('pt').textContent=cnt;
+  document.getElementById('pf').textContent='0/'+cnt;
+  tLim=lv==='easy'?90:lv==='med'?120:180;
+  setBar(tLim,tLim);
+
+  /* card dimensions: 4 per row */
+  var sw=window.innerWidth||360;
+  var gap=8, cols=4, pad=16;
+  var cw=Math.floor((sw - pad*2 - gap*(cols-1)) / cols);
+  if(cw>105) cw=105;
+  if(cw<65)  cw=65;
+  var ch=Math.floor(cw*1.22);
+
+  /* build deck */
+  var pool=ITEMS.slice(); shuffle(pool);
+  var chosen=pool.slice(0,cnt);
+  var deck=chosen.concat(chosen.slice()); shuffle(deck);
+  cards=deck;
+
+  /* replace grid DOM */
+  var wrap=document.getElementById('grid-wrap');
+  var old=document.getElementById('grid');
+  if(old&&old.parentNode) old.parentNode.removeChild(old);
+  var g=document.createElement('div');
+  g.id='grid';
+  g.style.display='flex';
+  g.style.flexWrap='wrap';
+  g.style.justifyContent='center';
+  g.style.gap=gap+'px';
+  wrap.appendChild(g);
+
+  /* create card elements */
+  for(var i=0;i<cards.length;i++){
+    var c=cards[i];
+    var el=document.createElement('div');
+    el.className='card';
+    el.setAttribute('data-i',''+i);
+    el.style.width=cw+'px';
+    el.style.height=ch+'px';
+
+    var back=document.createElement('div');
+    back.className='card-back';
+    back.innerHTML='<div class="pat">✦</div><div class="bm">رنيم فاي</div>';
+
+    var front=document.createElement('div');
+    front.className='card-front';
+    front.innerHTML='<div class="em">'+c.e+'</div><div class="wd">'+c.w+'</div>';
+
+    el.appendChild(back);
+    el.appendChild(front);
+    g.appendChild(el);
+  }
+
+  /* ONE delegated click listener per game */
+  g.addEventListener('click',function(ev){
+    if(gameId!==myId) return;
+    var t=ev.target;
+    while(t&&t!==g){
+      var di=t.getAttribute?t.getAttribute('data-i'):null;
+      if(di!==null){
+        flipCard(parseInt(di,10),myId);
+        return;
+      }
+      t=t.parentNode;
+    }
+  });
+
+  /* timer */
+  tInt=setInterval(function(){
+    if(gameId!==myId||!running) return;
+    elapsed++;
+    var r=tLim-elapsed;
+    document.getElementById('tm').textContent=fmt(elapsed);
+    setBar(r,tLim);
+    if(r<=0){clearInterval(tInt);tInt=null;gameOver(false,myId);}
+  },1000);
+
+  speak('ابحث عن الازواج المتشابهة');
+};
+
+function flipCard(i,myId){
+  if(gameId!==myId||!canFlip||!running) return;
+  if(flipped.length>=2) return;
+  var g=document.getElementById('grid');
+  if(!g) return;
+  var el=g.querySelector('[data-i="'+i+'"]');
+  if(!el||el.classList.contains('flipped')||el.classList.contains('matched')) return;
+  el.classList.add('flipped');
+  speak(cards[i].w);
+  flipped.push(i);
+  if(flipped.length===2){
+    canFlip=false;
+    moves++;
+    document.getElementById('mv').textContent=moves;
+    setTimeout(function(){
+      if(gameId===myId) checkMatch(myId);
+    },800);
+  }
+}
+
+function checkMatch(myId){
+  if(gameId!==myId) return;
+  var a=flipped[0], b=flipped[1];
+  var g=document.getElementById('grid');
+  if(!g){flipped=[];canFlip=true;return;}
+  var ea=g.querySelector('[data-i="'+a+'"]');
+  var eb=g.querySelector('[data-i="'+b+'"]');
+  if(cards[a].e===cards[b].e){
+    /* MATCH */
+    if(ea) ea.classList.add('matched');
+    if(eb) eb.classList.add('matched');
+    matched++;
+    score+=Math.max(10,30-moves);
+    document.getElementById('sc').textContent=score;
+    document.getElementById('pf').textContent=matched+'/'+LVL[lv];
+    flipped=[];canFlip=true;
+    speak('ممتاز');
+    if(matched===LVL[lv]){
+      running=false;
+      clearInterval(tInt);tInt=null;
+      setTimeout(function(){if(gameId===myId)gameOver(true,myId);},500);
+    }
+  }else{
+    /* NO MATCH */
+    if(ea) ea.classList.add('wrong');
+    if(eb) eb.classList.add('wrong');
+    setTimeout(function(){
+      if(gameId!==myId) return;
+      if(ea){ea.classList.remove('flipped');ea.classList.remove('wrong');}
+      if(eb){eb.classList.remove('flipped');eb.classList.remove('wrong');}
+      flipped=[];canFlip=true;
+    },500);
+  }
+}
+
+function gameOver(won,myId){
+  if(gameId!==myId) return;
+  running=false;
+  if(won){
+    var s=moves<=LVL[lv]+2?'⭐⭐⭐':moves<=LVL[lv]*2?'⭐⭐':'⭐';
+    document.getElementById('wst').textContent=s;
+    document.getElementById('we').textContent='🏆';
+    document.getElementById('wtitle').textContent='أحسنت! 🎉';
+    document.getElementById('wws').innerHTML='النقاط: <strong>'+score+'</strong><br>المحاولات: <strong>'+moves+'</strong><br>الوقت: <strong>'+fmt(elapsed)+'</strong>';
+    speak('احسنت لقد فزت');
+    confetti();
+  }else{
+    document.getElementById('wst').textContent='';
+    document.getElementById('we').textContent='⏰';
+    document.getElementById('wtitle').textContent='انتهى الوقت!';
+    document.getElementById('wws').innerHTML='وجدت <strong>'+matched+'</strong> من <strong>'+LVL[lv]+'</strong> زوج';
+    speak('انتهى الوقت');
+  }
+  document.getElementById('win').classList.add('show');
+}
+
+/* ── HELPERS ── */
+function shuffle(a){
+  for(var i=a.length-1;i>0;i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var t=a[i];a[i]=a[j];a[j]=t;
+  }
+}
+function fmt(s){
+  var m=Math.floor(s/60),r=s%60;
+  return(m<10?'0':'')+m+':'+(r<10?'0':'')+r;
+}
+function setBar(r,t){
+  var p=Math.max(0,Math.floor((r/t)*100));
+  var b=document.getElementById('tbar');
+  b.style.width=p+'%';
+  b.style.background=p>50?'linear-gradient(90deg,#1DB5A8,#F06292)':
+                     p>25?'linear-gradient(90deg,#FFD54F,#F06292)':'#e05080';
+}
+function confetti(){
+  var C=['#1DB5A8','#F06292','#FFD54F','#81D4FA','#A5D6A7'];
+  for(var i=0;i<50;i++){
+    var p=document.createElement('div');
+    p.className='cfall';
+    var sz=6+Math.random()*8;
+    p.style.left=Math.floor(Math.random()*100)+'vw';
+    p.style.background=C[Math.floor(Math.random()*C.length)];
+    p.style.width=sz+'px';
+    p.style.height=sz+'px';
+    p.style.animationDuration=(1.5+Math.random()*2)+'s';
+    p.style.animationDelay=(Math.random()*.7)+'s';
+    p.style.borderRadius=Math.random()>.5?'50%':'2px';
+    document.body.appendChild(p);
+    p.addEventListener('animationend',function(){
+      if(this.parentNode) this.parentNode.removeChild(this);
+    });
+  }
+}
+
+window.startGame();
+</script>
+</body>
+</html>
